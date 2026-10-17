@@ -1,5 +1,8 @@
 # boom-clickhouse
 
+See the [architecture replay benchmark](examples/boom/BENCHMARK.md) for captured-corpus
+replay, full CPU enrichment comparisons, baseline/shadow measurements and decision gates.
+
 [![ClickHouse integration demo](https://github.com/boom-astro/boom-clickhouse/actions/workflows/integration.yml/badge.svg)](https://github.com/boom-astro/boom-clickhouse/actions/workflows/integration.yml)
 
 A prototype of the photometry tier for BOOM: raw time series in ClickHouse,

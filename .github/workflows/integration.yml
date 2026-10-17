@@ -156,7 +156,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: mcoughlin/boom
-          ref: 87c341bfb8180008ececac8aed09f54a282a07ab
+          lfs: true
+          ref: a45c5bd5ca31a6dd6192198fcb93111b0b5c75de
           path: boom
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
@@ -170,28 +171,57 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libsasl2-dev libcfitsio-dev libkrb5-dev cmake clang pkg-config libssl-dev
+      - name: Install CPU ONNX Runtime
+        run: |
+          python3 -m pip install onnxruntime==1.24.4
+          python3 - <<'PYORT'
+          import os
+          import pathlib
+          import onnxruntime
+          capi = pathlib.Path(onnxruntime.__file__).parent / "capi"
+          library = next(capi.glob("libonnxruntime.so.*"))
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"ORT_DYLIB_PATH={library}\n")
+          PYORT
       - name: Install verified ClickHouse release
         run: bash .github/scripts/install-clickhouse.sh "$(dirname "$CH")"
       - name: Build and check the native worker proposal
         run: |
           cargo fmt --manifest-path ../boom/Cargo.toml --all --check
+          python3 -m unittest discover -s examples/boom/tests -p 'test_*.py'
           cargo test --locked --manifest-path ../boom/Cargo.toml --lib photometry::
-          cargo build --locked --manifest-path ../boom/Cargo.toml --example photometry_shadow_replay --example photometry_filter_audit
+          cargo test --locked --manifest-path ../boom/Cargo.toml --example photometry_benchmark
+          cargo build --locked --manifest-path ../boom/Cargo.toml --example photometry_shadow_replay --example photometry_filter_audit --example photometry_benchmark
           make -C ../boom check-configs
           git -C ../boom diff --exit-code -- config/prod
       - name: Replay real Avro packets through Redis, MongoDB, and ClickHouse
         env:
           DEMO_ARTIFACTS: ${{ runner.temp }}/proposal-demo
         run: python3 examples/boom/tests/proposal.py
+      - name: Benchmark baseline, shadow delivery, recovery, and CPU enrichment
+        env:
+          DEMO_ARTIFACTS: ${{ runner.temp }}/benchmark-demo
+        run: |
+          docker exec "${{ job.services.redis.id }}" redis-cli FLUSHALL
+          python3 examples/boom/tests/benchmark.py --objects 32 --epochs 4 --enrichment-samples 16
       - name: Publish proposal evidence
         if: always()
         run: |
           if [ -f "$RUNNER_TEMP/proposal-demo/demo.md" ]; then
             cat "$RUNNER_TEMP/proposal-demo/demo.md" >> "$GITHUB_STEP_SUMMARY"
           fi
+          if [ -f "$RUNNER_TEMP/benchmark-demo/decision.md" ]; then
+            cat "$RUNNER_TEMP/benchmark-demo/decision.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: real-alert-proposal
           path: ${{ runner.temp }}/proposal-demo
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: real-alert-benchmark
+          path: ${{ runner.temp }}/benchmark-demo
           if-no-files-found: ignore

@@ -1,0 +1,22 @@
+{
+  "survey": "ZTF",
+  "audited_on": "2026-10-17",
+  "export_sha256": "1e8408b2d6ecec5fbf61807ad1bc41a43bcf619c40ca7e34d1343985809748dc",
+  "scope": "user-supplied deployed active-filter export; active versions only; aggregate dependency inventory, no pipeline execution",
+  "active_filters": 96,
+  "classifications": {
+    "no_history_reference_detected": 33,
+    "history_review_required": 63
+  },
+  "history_fields": {
+    "prv_candidates": 62,
+    "prv_nondetections": 10,
+    "fp_hists": 21
+  },
+  "automatic_window_approval": false,
+  "limitations": [
+    "No filter semantics equivalence or retention horizon is established",
+    "Filters can reference multiple history fields, so field counts overlap",
+    "Individual names, identifiers and pipeline bodies are omitted"
+  ]
+}

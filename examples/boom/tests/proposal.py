@@ -21,12 +21,7 @@ integration.BINARY = BINARY
 integration.ARTIFACTS = ARTIFACTS
 
 
-def replay(directory, port):
-    database = "boom_shadow_replay_" + directory.name.replace("-", "_")
-    assert database.isidentifier()
-    request = urllib.request.Request(f"http://127.0.0.1:{port}", data=f"CREATE DATABASE `{database}`".encode())
-    with urllib.request.urlopen(request, timeout=10) as response:
-        assert response.status == 200
+def disposable_config(port, database):
     mongo = {"host": "127.0.0.1", "port": int(os.environ.get("REPLAY_MONGO_PORT", "37117")),
              "name": database, "username": "shadow", "password": "shadow-test-only",
              "max_pool_size": 20, "replica_set": None, "srv": False}
@@ -42,8 +37,18 @@ def replay(directory, port):
         "workers": {"ztf": {"command_interval": 100, "alert": {"n_workers": 1},
             "enrichment": {"n_workers": 1}, "filter": {"n_workers": 1, "refresh_interval_minutes": 15, "max_match_rate": 5}}},
         "photometry_shadow": {"url": f"http://127.0.0.1:{port}", "database": database,
-            "username": "default", "password": "", "poll_seconds": 1, "drain_rows": 64},
+            "username": "default", "password": "", "poll_seconds": 1, "drain_rows": 64, "concurrent_deliveries": 4},
     }
+    return config
+
+
+def replay(directory, port):
+    database = "boom_shadow_replay_" + directory.name.replace("-", "_")
+    assert database.isidentifier()
+    request = urllib.request.Request(f"http://127.0.0.1:{port}", data=f"CREATE DATABASE `{database}`".encode())
+    with urllib.request.urlopen(request, timeout=10) as response:
+        assert response.status == 200
+    config = disposable_config(port, database)
     path = directory / "config.json"
     path.write_text(json.dumps(config))
     ARTIFACTS.mkdir(parents=True, exist_ok=True)

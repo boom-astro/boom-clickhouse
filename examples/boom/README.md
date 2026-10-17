@@ -3,18 +3,19 @@
 This is a runnable Rust shadow store for the normalized photometry BOOM already
 produces. It includes a small HTTP client, a separate ClickHouse table, a fixture,
 and tests against a disposable ClickHouse server. The companion
-[`clickhouse_shadow` example](https://github.com/mcoughlin/boom/blob/87c341bfb8180008ececac8aed09f54a282a07ab/examples/clickhouse_shadow.rs) in the
-sibling BOOM checkout uses BOOM's actual `ZtfPrvCandidate` and `ZtfForcedPhot`
-types for both serialization and readback. Keep these two checkouts as siblings;
-the BOOM example includes the adapter module by relative path and uses existing
-BOOM dependencies. Its `clickhouse-example` feature keeps default BOOM builds
-independent of the sibling checkout. The basic example is a smoke test. The
+[`clickhouse_shadow` example](https://github.com/mcoughlin/boom/blob/a45c5bd5ca31a6dd6192198fcb93111b0b5c75de/examples/clickhouse_shadow.rs) in the
+BOOM checkout uses BOOM's actual `ZtfPrvCandidate` and `ZtfForcedPhot`
+types and its native adapter. The canonical standalone example below still
+supports the baseline BOOM commit used in CI. The basic example is a smoke test. The
 native worker proposal below adds a separate opt-in path, disabled by default.
+
+The [architecture replay benchmark](BENCHMARK.md) adds captured-corpus manifests,
+baseline/shadow/recovery measurements, CPU model parity and a decision report.
 
 ## Native worker proposal and real-alert replay
 
-The companion BOOM proposal at `87c341b` includes a [native implementation](https://github.com/mcoughlin/boom/blob/87c341bfb8180008ececac8aed09f54a282a07ab/src/photometry/mod.rs)
-and [architecture and recovery contract](https://github.com/mcoughlin/boom/blob/87c341bfb8180008ececac8aed09f54a282a07ab/docs/photometry-shadow.md).
+The companion BOOM proposal at `a45c5bd` includes a [native implementation](https://github.com/mcoughlin/boom/blob/a45c5bd5ca31a6dd6192198fcb93111b0b5c75de/src/photometry/mod.rs)
+and [architecture and recovery contract](https://github.com/mcoughlin/boom/blob/a45c5bd5ca31a6dd6192198fcb93111b0b5c75de/docs/photometry-shadow.md).
 It writes durable references before Mongo ingestion, drains accepted source
 snapshots with expiring leases, compares complete records and photometry
 features, and reports lag. MongoDB retains its current authority and histories.
@@ -76,16 +77,16 @@ pull requests, and manual dispatch. The first job tests the adapter and prototyp
 schemas. The second checks out BOOM at commit
 `1a39dcc3c403c6cc8533dfad862c1eac2c62a088`, installs the example from this
 repository, and runs the same HTTP suite through BOOM's actual ZTF types.
-A third job checks out the native worker proposal at `87c341b`, starts isolated
+A third job checks out the native worker proposal at `a45c5bd`, starts isolated
 MongoDB and Redis services, and publishes the real-alert proposal report.
 It does not require a corresponding BOOM PR, extra secrets, or production services.
 
-Both jobs use ClickHouse **26.9.21.9 stable**, downloaded from the official release
+All three jobs use ClickHouse **26.9.21.9 stable**, downloaded from the official release
 and checked against a pinned SHA-256. Each run publishes a scenario table in the
 GitHub job summary and a downloadable artifact containing `demo.md`, `results.json`,
 `junit.xml`, example histories and bins, and server logs. Failed assertions fail
-the job; reports and logs are uploaded on failure too. The canonical BOOM example
-is [boom_example.rs](boom_example.rs); the copy in the BOOM checkout should match it.
+the job; reports and logs are uploaded on failure too. The canonical standalone BOOM example is [boom_example.rs](boom_example.rs);
+the native proposal uses its own adapter.
 
 ## Run the complete isolated demonstration
 
