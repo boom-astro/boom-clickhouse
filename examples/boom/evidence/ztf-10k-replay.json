@@ -1,0 +1,516 @@
+{
+  "measured_on": "2026-10-17",
+  "scope": "two independent local executions, not one continuous three-phase pass; aggregate evidence only",
+  "workload": {
+    "kind": "captured",
+    "packets": 10000,
+    "unique_alerts": 10000,
+    "objects": 9755,
+    "manifest_sha256": "a17eda4cdff4d921cc5d9bc00d3544929bf7ad6dff81ac7ec9c3e5d41c8836ca",
+    "provenance": {
+      "content": "existing Avro packets, unchanged",
+      "timing_basis": "synthetic_fixed_spacing_in_filename_order",
+      "spacing_ms": 10,
+      "total_bytes": 863187069,
+      "source_label": "ztf_20261016_programid1"
+    }
+  },
+  "delivery": {
+    "concurrent_deliveries": 4,
+    "drain_rows": 64,
+    "poll_seconds": 1
+  },
+  "initial_execution": {
+    "status": "FAIL",
+    "failure": "Docker VM ENOSPC caused Mongo WiredTiger fatal checkpoint and EOF during outage phase",
+    "raw_report_sha256": "d0d7942304b4497a2ee2cbfcdc7e24bcd5125bc2a4e2fbe2f05b0e2998a7e9f0",
+    "failure_log_sha256": "5f28f26184eaf0b794197f58625458c87cfeedd0b6ec78a1563f5110824c16b6",
+    "provenance_limitation": "Initial controller appended final source/binary provenance only on success. Failed-run phase timings are exploratory and need reproduction for rollout sizing.",
+    "completed_phases": {
+      "baseline": {
+        "ingest_seconds": 115.399345708,
+        "settled_seconds": 115.836774708,
+        "ingest_packets_per_second": 86.65560396939716,
+        "settled_packets_per_second": 86.32837046100329,
+        "recovery": {},
+        "populated_history_read_ms": {
+          "samples": 456,
+          "p50": 3.831917,
+          "p95": 5.554,
+          "p99": 6.955042
+        },
+        "peak_sampled_pending_age_seconds": 0,
+        "history_objects_checked_read_only": 0,
+        "sampled_model_comparisons": {
+          "acai_btsbot": 0,
+          "applecider": 0,
+          "all_equal": true
+        },
+        "history_records_by_kind": {
+          "detection": 0,
+          "upper_limit": 0,
+          "forced": 0
+        },
+        "history_points_per_object": {
+          "p50": null,
+          "p95": null,
+          "p100": null
+        },
+        "history_span_days": {
+          "p50": null,
+          "p95": null,
+          "p100": null
+        },
+        "storage": {
+          "mongo_database": {
+            "dataSize": 703297604.0,
+            "storageSize": 420724736.0,
+            "indexSize": 2347008.0
+          },
+          "mongo_aux": {
+            "size": 283923109,
+            "storageSize": 82255872,
+            "totalIndexSize": 966656
+          },
+          "clickhouse": null
+        }
+      },
+      "shadow": {
+        "ingest_seconds": 139.038419416,
+        "settled_seconds": 526.257538375,
+        "ingest_packets_per_second": 71.92256674092512,
+        "settled_packets_per_second": 19.0021030974272,
+        "recovery": {},
+        "populated_history_read_ms": {
+          "samples": 2033,
+          "p50": 12.883208,
+          "p95": 26.189375000000002,
+          "p99": 46.019875
+        },
+        "peak_sampled_pending_age_seconds": 521.173,
+        "history_objects_checked_read_only": 9755,
+        "sampled_model_comparisons": {
+          "acai_btsbot": 32,
+          "applecider": 32,
+          "all_equal": true
+        },
+        "history_records_by_kind": {
+          "detection": 135480,
+          "upper_limit": 377750,
+          "forced": 263828
+        },
+        "history_points_per_object": {
+          "p50": 80,
+          "p95": 100,
+          "p100": 144
+        },
+        "history_span_days": {
+          "p50": 29.959085599984974,
+          "p95": 29.97983800014481,
+          "p100": 30.02730319974944
+        },
+        "storage": {
+          "mongo_database": {
+            "dataSize": 751782035.0,
+            "storageSize": 544452608.0,
+            "indexSize": 3579904.0
+          },
+          "mongo_aux": {
+            "size": 283923109,
+            "storageSize": 106672128,
+            "totalIndexSize": 1167360
+          },
+          "clickhouse": {
+            "physical_rows": 792417,
+            "compressed_column_bytes": 86136491,
+            "bytes_on_disk": 86298255,
+            "unique_rows": 777058
+          }
+        }
+      }
+    },
+    "later_read_only_storage_snapshot": {
+      "sha256": "ba1c40bdf73929247a12a9597e935f8b5838b461563e0f32b6738b039ba415b7",
+      "columns": [
+        {
+          "name": "object_id",
+          "type": "String",
+          "data_compressed_bytes": 224462,
+          "data_uncompressed_bytes": 15321360,
+          "marks_bytes": 1337
+        },
+        {
+          "name": "kind",
+          "type": "Enum8('detection' = 1, 'upper_limit' = 2, 'forced' = 3)",
+          "data_compressed_bytes": 204498,
+          "data_uncompressed_bytes": 766068,
+          "marks_bytes": 592
+        },
+        {
+          "name": "band",
+          "type": "LowCardinality(String)",
+          "data_compressed_bytes": 287190,
+          "data_uncompressed_bytes": 767719,
+          "marks_bytes": 962
+        },
+        {
+          "name": "jd",
+          "type": "Float64",
+          "data_compressed_bytes": 2728222,
+          "data_uncompressed_bytes": 6128544,
+          "marks_bytes": 707
+        },
+        {
+          "name": "programid",
+          "type": "Int32",
+          "data_compressed_bytes": 13881,
+          "data_uncompressed_bytes": 3064272,
+          "marks_bytes": 671
+        },
+        {
+          "name": "revision",
+          "type": "UInt64",
+          "data_compressed_bytes": 5428,
+          "data_uncompressed_bytes": 231754,
+          "marks_bytes": 1239
+        },
+        {
+          "name": "flux",
+          "type": "Nullable(Float64)",
+          "data_compressed_bytes": 1841231,
+          "data_uncompressed_bytes": 6894612,
+          "marks_bytes": 1285
+        },
+        {
+          "name": "flux_err",
+          "type": "Nullable(Float64)",
+          "data_compressed_bytes": 2871200,
+          "data_uncompressed_bytes": 6894612,
+          "marks_bytes": 1291
+        },
+        {
+          "name": "payload",
+          "type": "String",
+          "data_compressed_bytes": 73421899,
+          "data_uncompressed_bytes": 391649802,
+          "marks_bytes": 1497
+        },
+        {
+          "name": "ts",
+          "type": "DateTime('UTC')",
+          "data_compressed_bytes": 1604124,
+          "data_uncompressed_bytes": 3064272,
+          "marks_bytes": 692
+        }
+      ],
+      "server_profile_events": [
+        {
+          "event": "WriteBufferFromFileDescriptorWriteBytes",
+          "value": 3330107499,
+          "description": "Number of bytes written to file descriptors. If the file is compressed, this will show compressed data size."
+        },
+        {
+          "event": "InsertedRows",
+          "value": 796446,
+          "description": "Number of rows INSERTed to all tables."
+        },
+        {
+          "event": "InsertedBytes",
+          "value": 450209417,
+          "description": "Number of bytes (uncompressed; for columns as they stored in memory) INSERTed to all tables."
+        },
+        {
+          "event": "DuplicatedInsertedBlocks",
+          "value": 92,
+          "description": "Number of the synchronous inserts to a *MergeTree table was deduplicated."
+        },
+        {
+          "event": "MergedRows",
+          "value": 27449847,
+          "description": "Rows read for background merges. This is the number of rows before merge."
+        },
+        {
+          "event": "MergedUncompressedBytes",
+          "value": 15308391899,
+          "description": "Uncompressed bytes (for columns as they stored in memory) that was read for background merges. This is the number before merge."
+        },
+        {
+          "event": "MergeTreeDataWriterRows",
+          "value": 796446,
+          "description": "Number of rows INSERTed to MergeTree tables."
+        },
+        {
+          "event": "MergeTreeDataWriterUncompressedBytes",
+          "value": 459449750,
+          "description": "Uncompressed bytes (for columns as they stored in memory) INSERTed to MergeTree tables."
+        },
+        {
+          "event": "MergeTreeDataWriterCompressedBytes",
+          "value": 190946163,
+          "description": "Bytes written to filesystem for data INSERTed to MergeTree tables."
+        }
+      ],
+      "counter_scope": "cumulative dedicated-server counters across all benchmark databases; delta phase snapshots before attribution",
+      "observed_at_utc": "2026-10-17T20:33:55.413524+00:00"
+    }
+  },
+  "independent_recovery_execution": {
+    "status": "PASS",
+    "raw_report_sha256": "6f925b7d3ab5a3e49e9c727d53bc055a212cdc7da7b47c9d5c22e1abc564ebd2",
+    "provenance": {
+      "boom_revision": "7ee77a5f3527d07c4a31c67f01e857415ec35a57",
+      "boom_dirty": false,
+      "binary_sha256": "5372fcc8b01c1a911c070874755a963ddf49aaafe9e3b7dc4b386589f7481200",
+      "demo_revision": "525f52a837aa40d66b75c7a3c0c9b2284fe664ef",
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "cpu_count": 10,
+      "models": [
+        {
+          "name": "acai_b.d1_dnn_20201130.onnx",
+          "sha256": "8e19725bf2778c175d55f9810008648067ef6ceb11d9521c9bdc786faa74bd8b"
+        },
+        {
+          "name": "acai_h.d1_dnn_20201130.onnx",
+          "sha256": "627893ad62a654f4a72f9fa84fd414e0a8042c479ef50cc08236b7ed962c411b"
+        },
+        {
+          "name": "acai_n.d1_dnn_20201130.onnx",
+          "sha256": "f380616f6fca1ce1034a9b72f3509558c0083d846ea80b8d85236cfbc78248ad"
+        },
+        {
+          "name": "acai_o.d1_dnn_20201130.onnx",
+          "sha256": "d58eac9f98a3c1df0e00c5391d5bbc70f337196833b94c9f799dcb1f70797d1c"
+        },
+        {
+          "name": "acai_v.d1_dnn_20201130.onnx",
+          "sha256": "4dac7ce1b1f8f4db05a0ec36527f84c5745afd6e83afec225dddc8df37efbe5e"
+        },
+        {
+          "name": "btsbot-v1.0.1.onnx",
+          "sha256": "ad16e6be9719fca9613187e3bc80095a9852af3c6e1d1fd24edfc1f023348da4"
+        },
+        {
+          "name": "btsbot-v2.0.0.onnx",
+          "sha256": "38f61e6013067d9929b9ff3f52ecd9d42aa702c324347944d2ee14d09c9aeba2"
+        },
+        {
+          "name": "cider_fusion_plus_embedding.onnx",
+          "sha256": "6f8b8d8aea02e714942d793e7ae7b0fdc152f2fa0fb94170b7e682b37ed5f570"
+        }
+      ],
+      "clickhouse_version": "ClickHouse local version 26.11.1.120 (official build)."
+    },
+    "phases": {
+      "recovery": {
+        "ingest_seconds": 130.488621208,
+        "settled_seconds": 646.07434275,
+        "ingest_packets_per_second": 76.63503459094653,
+        "settled_packets_per_second": 15.478094916190663,
+        "recovery": {
+          "pending_at_restore": 10000,
+          "seconds": 515.537828084,
+          "references_per_second": 19.397218701031253,
+          "fault": "HTTP 503 via loopback proxy; same worker throughout; no new input during recovery"
+        },
+        "populated_history_read_ms": {
+          "samples": 0,
+          "p50": null,
+          "p95": null,
+          "p99": null
+        },
+        "peak_sampled_pending_age_seconds": 606.02,
+        "history_objects_checked_read_only": 9755,
+        "sampled_model_comparisons": {
+          "acai_btsbot": 32,
+          "applecider": 32,
+          "all_equal": true
+        },
+        "history_records_by_kind": {
+          "detection": 135480,
+          "upper_limit": 377750,
+          "forced": 263828
+        },
+        "history_points_per_object": {
+          "p50": 80,
+          "p95": 100,
+          "p100": 144
+        },
+        "history_span_days": {
+          "p50": 29.959085599984974,
+          "p95": 29.97983800014481,
+          "p100": 30.02730319974944
+        },
+        "storage": {
+          "mongo_database": {
+            "dataSize": 751782035.0,
+            "storageSize": 553865216.0,
+            "indexSize": 3817472.0
+          },
+          "mongo_aux": {
+            "size": 283923109,
+            "storageSize": 111288320,
+            "totalIndexSize": 1253376
+          },
+          "clickhouse": {
+            "physical_rows": 788419,
+            "compressed_column_bytes": 86228653,
+            "bytes_on_disk": 86388217,
+            "unique_rows": 777058,
+            "columns": [
+              {
+                "name": "object_id",
+                "type": "String",
+                "data_compressed_bytes": 219318,
+                "data_uncompressed_bytes": 14976480,
+                "marks_bytes": 1279
+              },
+              {
+                "name": "kind",
+                "type": "Enum8('detection' = 1, 'upper_limit' = 2, 'forced' = 3)",
+                "data_compressed_bytes": 200185,
+                "data_uncompressed_bytes": 748824,
+                "marks_bytes": 595
+              },
+              {
+                "name": "band",
+                "type": "LowCardinality(String)",
+                "data_compressed_bytes": 281676,
+                "data_uncompressed_bytes": 750459,
+                "marks_bytes": 936
+              },
+              {
+                "name": "jd",
+                "type": "Float64",
+                "data_compressed_bytes": 2702194,
+                "data_uncompressed_bytes": 5990592,
+                "marks_bytes": 677
+              },
+              {
+                "name": "programid",
+                "type": "Int32",
+                "data_compressed_bytes": 13572,
+                "data_uncompressed_bytes": 2995296,
+                "marks_bytes": 665
+              },
+              {
+                "name": "revision",
+                "type": "UInt64",
+                "data_compressed_bytes": 11702,
+                "data_uncompressed_bytes": 1407907,
+                "marks_bytes": 1097
+              },
+              {
+                "name": "flux",
+                "type": "Nullable(Float64)",
+                "data_compressed_bytes": 1821616,
+                "data_uncompressed_bytes": 6739416,
+                "marks_bytes": 1259
+              },
+              {
+                "name": "flux_err",
+                "type": "Nullable(Float64)",
+                "data_compressed_bytes": 2808070,
+                "data_uncompressed_bytes": 6739416,
+                "marks_bytes": 1266
+              },
+              {
+                "name": "payload",
+                "type": "String",
+                "data_compressed_bytes": 72382135,
+                "data_uncompressed_bytes": 384219247,
+                "marks_bytes": 1429
+              },
+              {
+                "name": "ts",
+                "type": "DateTime('UTC')",
+                "data_compressed_bytes": 1588479,
+                "data_uncompressed_bytes": 2995296,
+                "marks_bytes": 685
+              }
+            ],
+            "logical_payload_bytes": 389752423,
+            "server_profile_events": [
+              {
+                "event": "WriteBufferFromFileDescriptorWriteBytes",
+                "value": 3322166875,
+                "description": "Number of bytes written to file descriptors. If the file is compressed, this will show compressed data size."
+              },
+              {
+                "event": "InsertedRows",
+                "value": 796678,
+                "description": "Number of rows INSERTed to all tables."
+              },
+              {
+                "event": "InsertedBytes",
+                "value": 450573957,
+                "description": "Number of bytes (uncompressed; for columns as they stored in memory) INSERTed to all tables."
+              },
+              {
+                "event": "DuplicatedInsertedBlocks",
+                "value": 84,
+                "description": "Number of the synchronous inserts to a *MergeTree table was deduplicated."
+              },
+              {
+                "event": "MergedRows",
+                "value": 27205721,
+                "description": "Rows read for background merges. This is the number of rows before merge."
+              },
+              {
+                "event": "MergedUncompressedBytes",
+                "value": 15228500305,
+                "description": "Uncompressed bytes (for columns as they stored in memory) that was read for background merges. This is the number before merge."
+              },
+              {
+                "event": "MergeTreeDataWriterRows",
+                "value": 796678,
+                "description": "Number of rows INSERTed to MergeTree tables."
+              },
+              {
+                "event": "MergeTreeDataWriterUncompressedBytes",
+                "value": 459663426,
+                "description": "Uncompressed bytes (for columns as they stored in memory) INSERTed to MergeTree tables."
+              },
+              {
+                "event": "MergeTreeDataWriterCompressedBytes",
+                "value": 191003180,
+                "description": "Bytes written to filesystem for data INSERTed to MergeTree tables."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "decision": {
+      "gates": {
+        "captured_workload": true,
+        "recorded_arrivals": false,
+        "repeated_object_coverage": true,
+        "deployed_filter_inventory": true,
+        "history_parity": true,
+        "enrichment_parity": true,
+        "throughput_target": null,
+        "sampled_lag_target": null,
+        "recovery_headroom": null,
+        "binning_parity": true
+      },
+      "verdict": "more_evidence_required",
+      "recommended_next_step": "collect the missing workload/filter/target evidence before a retention decision",
+      "binning_comparisons": 96,
+      "model_coverage": {
+        "acai_and_btsbot_alerts": 32,
+        "applecider_alerts": 32
+      },
+      "ingestion_elapsed_overhead_percent": null
+    },
+    "peak_age_scope": "phase peak recomputed over both ingestion and recovery samples"
+  },
+  "limitations": [
+    "Archive timing is synthetic; no broker arrival-rate or target-lag conclusion",
+    "Single alert worker, four concurrent shadow deliveries; no maximum capacity claim",
+    "Full model parity covers a deterministic sample, not all production model/context paths",
+    "No production catalog/replica-failover/private-program workload or sustained concurrent recovery measurement",
+    "Storage is additional mirror footprint; complete Mongo histories are retained",
+    "Server counters measure insert data, merge inputs and file writes at different layers, not physical device write amplification",
+    "Filter export audited for dependencies only; no deployed predicate execution or retention window approved"
+  ]
+}

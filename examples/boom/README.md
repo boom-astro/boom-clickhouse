@@ -11,10 +11,13 @@ native worker proposal below adds a separate opt-in path, disabled by default.
 
 The [architecture replay benchmark](BENCHMARK.md) adds captured-corpus manifests,
 baseline/shadow/recovery measurements, CPU model parity and a decision report.
+The [measured proposal](PROPOSAL.md) records the captured-corpus findings and
+remaining requirements. Native on-demand bins and per-column storage accounting
+are covered by the same replay checks.
 
 ## Native worker proposal and real-alert replay
 
-The companion BOOM proposal at `a45c5bd` includes a [native implementation](https://github.com/mcoughlin/boom/blob/7ee77a5f3527d07c4a31c67f01e857415ec35a57/src/photometry/mod.rs)
+The companion BOOM proposal at `7ee77a5` includes a [native implementation](https://github.com/mcoughlin/boom/blob/7ee77a5f3527d07c4a31c67f01e857415ec35a57/src/photometry/mod.rs)
 and [architecture and recovery contract](https://github.com/mcoughlin/boom/blob/7ee77a5f3527d07c4a31c67f01e857415ec35a57/docs/photometry-shadow.md).
 It writes durable references before Mongo ingestion, drains accepted source
 snapshots with expiring leases, compares complete records and photometry
@@ -77,7 +80,7 @@ pull requests, and manual dispatch. The first job tests the adapter and prototyp
 schemas. The second checks out BOOM at commit
 `1a39dcc3c403c6cc8533dfad862c1eac2c62a088`, installs the example from this
 repository, and runs the same HTTP suite through BOOM's actual ZTF types.
-A third job checks out the native worker proposal at `a45c5bd`, starts isolated
+A third job checks out the native worker proposal at `7ee77a5`, starts isolated
 MongoDB and Redis services, and publishes the real-alert proposal report.
 It does not require a corresponding BOOM PR, extra secrets, or production services.
 
@@ -141,6 +144,7 @@ cargo check --features clickhouse-example --example clickhouse_shadow
 cargo run --features clickhouse-example --example clickhouse_shadow -- prepare ../boom-clickhouse/examples/boom/fixture.json 1
 cargo run --features clickhouse-example --example clickhouse_shadow -- write ../boom-clickhouse/examples/boom/fixture.json 1
 cargo run --features clickhouse-example --example clickhouse_shadow -- read ZTF_demo
+cargo run --features clickhouse-example --example clickhouse_shadow -- bins ZTF_demo 900
 ```
 
 After building that example, the HTTP suite can use the BOOM executable for

@@ -41,10 +41,12 @@ class DecisionEvidenceTests(unittest.TestCase):
         report = self.report()
         report["phases"] = {"recovery": report["phases"]["recovery"]}
         report["targets"]["packets_per_second"] = 30
+        report["phases"]["recovery"]["recovery"]["samples"] = [{"lag": {"oldest_age_seconds": 50}}]
         result = benchmark.summary(report)
         self.assertIsNone(result["gates"]["throughput_target"])
         self.assertIsNone(result["ingestion_elapsed_overhead_percent"])
         self.assertTrue(result["gates"]["recovery_headroom"])
+        self.assertEqual(result["sampled_peak_age_seconds"], 50)
 
     def test_binning_uses_source_measurements_and_detects_stale_flux(self):
         history = {"version": 2, "prv_candidates": [

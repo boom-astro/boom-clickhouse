@@ -33,6 +33,8 @@ def summary(report):
     phases = report["phases"]
     healthy = phases.get("shadow") or phases["recovery"]
     samples = healthy["samples"]
+    if "shadow" not in phases:
+        samples = samples + healthy.get("recovery", {}).get("samples", [])
     peak_age = max((r["lag"]["oldest_age_seconds"] or 0 for r in samples), default=0)
     target = report["targets"]["packets_per_second"]
     lag_target = report["targets"]["max_lag_seconds"]

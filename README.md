@@ -1,7 +1,10 @@
 # boom-clickhouse
 
-See the [architecture replay benchmark](examples/boom/BENCHMARK.md) for captured-corpus
-replay, full CPU enrichment comparisons, baseline/shadow measurements and decision gates.
+See the [measured BOOM proposal](examples/boom/PROPOSAL.md) for the 10,000-packet
+captured replay, complete-record storage costs, corrected on-demand bins and rollout
+gates. The current integration mirrors histories while MongoDB retains authority
+and complete data. Reproduce it with the [architecture replay benchmark](examples/boom/BENCHMARK.md).
+The older synthetic compression results below describe a different, smaller schema.
 
 [![ClickHouse integration demo](https://github.com/boom-astro/boom-clickhouse/actions/workflows/integration.yml/badge.svg)](https://github.com/boom-astro/boom-clickhouse/actions/workflows/integration.yml)
 
