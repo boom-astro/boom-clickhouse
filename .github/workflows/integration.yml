@@ -122,3 +122,76 @@ jobs:
           name: boom-types-demo
           path: ${{ runner.temp }}/boom-demo
           if-no-files-found: ignore
+
+  proposal:
+    name: Real alerts, durable delivery, and parity
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: boom-clickhouse
+    services:
+      mongo:
+        image: mongo:8.2
+        env:
+          MONGO_INITDB_ROOT_USERNAME: shadow
+          MONGO_INITDB_ROOT_PASSWORD: shadow-test-only
+        ports:
+          - 37117:27017
+        options: >-
+          --health-cmd "mongosh --quiet --username shadow --password shadow-test-only --authenticationDatabase admin --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 37179:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: boom-clickhouse
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: mcoughlin/boom
+          ref: 87c341bfb8180008ececac8aed09f54a282a07ab
+          path: boom
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: boom -> target
+          key: boom-shadow-proposal
+      - name: Install BOOM build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsasl2-dev libcfitsio-dev libkrb5-dev cmake clang pkg-config libssl-dev
+      - name: Install verified ClickHouse release
+        run: bash .github/scripts/install-clickhouse.sh "$(dirname "$CH")"
+      - name: Build and check the native worker proposal
+        run: |
+          cargo fmt --manifest-path ../boom/Cargo.toml --all --check
+          cargo test --locked --manifest-path ../boom/Cargo.toml --lib photometry::
+          cargo build --locked --manifest-path ../boom/Cargo.toml --example photometry_shadow_replay --example photometry_filter_audit
+          make -C ../boom check-configs
+          git -C ../boom diff --exit-code -- config/prod
+      - name: Replay real Avro packets through Redis, MongoDB, and ClickHouse
+        env:
+          DEMO_ARTIFACTS: ${{ runner.temp }}/proposal-demo
+        run: python3 examples/boom/tests/proposal.py
+      - name: Publish proposal evidence
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/proposal-demo/demo.md" ]; then
+            cat "$RUNNER_TEMP/proposal-demo/demo.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: real-alert-proposal
+          path: ${{ runner.temp }}/proposal-demo
+          if-no-files-found: ignore

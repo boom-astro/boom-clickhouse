@@ -7,6 +7,18 @@ fn point() -> Value {
 }
 
 #[test]
+fn real_fixture_float_precision_survives_json_readback() {
+    let source = json!({"forcediffimfluxunc":46.038883209228516_f64,
+        "magzpsci":26.152799606323242_f64,"pid":9007199254740993_i64});
+    let row =
+        json!({"kind":"forced","payload":serde_json::to_string(&source).unwrap()}).to_string();
+    assert_eq!(
+        ZtfHistory::from_json_each_row(&row).unwrap().fp_hists[0],
+        source
+    );
+}
+
+#[test]
 fn preserves_full_records_and_keeps_kinds_separate() {
     let record = point();
     let upper = json!({"jd":2461000.5,"band":"r","programid":1,"diffmaglim":21,"psfFluxErr":2});

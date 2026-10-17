@@ -163,7 +163,7 @@ def check(directory, port):
     passed("HTTP failure propagation", "missing database returns a failing process status")
 
 
-def main():
+def main(check_fn=check):
     if not BINARY.is_file():
         raise SystemExit("Build first: cargo build --manifest-path examples/boom/Cargo.toml")
     with tempfile.TemporaryDirectory(prefix="boom-clickhouse-http-") as tmp:
@@ -202,7 +202,7 @@ def main():
                     if time.monotonic() > deadline:
                         raise RuntimeError((directory / "console.log").read_text())
                     time.sleep(0.1)
-                check(directory, port)
+                check_fn(directory, port)
             finally:
                 process.terminate()
                 try:
@@ -215,7 +215,8 @@ def main():
                     for name in ("console.log", "server.log", "error.log"):
                         if (directory / name).is_file():
                             shutil.copy2(directory / name, ARTIFACTS / name)
-    print("PASS: real HTTP writes/reads, replay, overlap, late points, revisions, upper limits, programs, null/negative flux, SQL parameters, server errors")
+    if check_fn is check:
+        print("PASS: real HTTP writes/reads, replay, overlap, late points, revisions, upper limits, programs, null/negative flux, SQL parameters, server errors")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,8 @@ This remains a storage experiment, not a production ingestion design.
 
 A runnable [BOOM ZTF integration example](examples/boom/README.md) now includes
 a Rust HTTP adapter, real BOOM type integration, full record readback, and
-disposable-server tests. It uses a separate table and computes bins from
+disposable-server tests. It also includes a native worker proposal replay with
+MongoDB, Redis, durable delivery, and real Avro fixtures. It uses a separate table and computes bins from
 deduplicated rows so overlapping alert histories stay correct.
 
 ## Why photometry has to leave MongoDB for Argus
