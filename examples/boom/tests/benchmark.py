@@ -48,7 +48,7 @@ def summary(report):
                                  all(r["parity"]["equal"] for r in p["enrichment"])
                                  for k, p in phases.items() if k != "baseline"),
         "throughput_target": None if target is None or "shadow" not in phases else healthy["settled_packets_per_second"] >= target,
-        "sampled_lag_target": None if lag_target is None else peak_age <= lag_target,
+        "sampled_lag_target": None if lag_target is None or "shadow" not in phases else peak_age <= lag_target,
         "recovery_headroom": None if target is None or "recovery" not in phases else phases["recovery"]["recovery"]["references_per_second"] > target,
     }
     bin_checks = 0
@@ -112,6 +112,31 @@ def write_report(report, artifacts):
         mongo, aux, ch = store["mongo_database"], store["mongo_aux"], store["clickhouse"]
         lines.append(f"| {name} | {mongo['storageSize']} | {mongo['indexSize']} | {aux['size']} | "
                      f"{ch['compressed_column_bytes'] if ch else 'n/a'} | {ch['bytes_on_disk'] if ch else 'n/a'} |")
+    lines += ["", "### Full-record column footprint", "",
+              "| Phase | Column | Compressed bytes | Uncompressed bytes | Marks bytes |",
+              "| --- | --- | ---: | ---: | ---: |"]
+    previous_events = {}
+    payload_lines = []
+    counter_lines = ["", "### Dedicated-server activity between phase snapshots", "",
+                     "| Through phase | Counter | Increment |", "| --- | --- | ---: |"]
+    for name, phase in report["phases"].items():
+        ch = phase["storage"]["clickhouse"]
+        if not ch:
+            continue
+        for column in ch.get("columns", []):
+            lines.append(f"| {name} | {column['name']} | {column['data_compressed_bytes']} | "
+                         f"{column['data_uncompressed_bytes']} | {column['marks_bytes']} |")
+        payload_lines += ["", f"{name}: {ch.get('logical_payload_bytes', 'unrecorded')} logical payload bytes "
+                  f"across {ch['unique_rows']} current rows.", ""]
+        current = {row["event"]: row["value"] for row in ch.get("server_profile_events", [])}
+        for event, value in current.items():
+            counter_lines.append(f"| {name} | {event} | {value - previous_events.get(event, 0)} |")
+        previous_events = current
+    lines += payload_lines + counter_lines + ["", "Counters cover all activity on this dedicated server between snapshots, including "
+              "earlier databases' background merges. MergedRows and MergedUncompressedBytes count merge inputs; "
+              "file-descriptor writes include data and metadata, not physical device writes. Compressed inserted "
+              "bytes measure insert data writes before later merge rewrites. Column and part snapshots may differ "
+              "while merges run. These are distinct measurements, not one physical write-amplification ratio."]
     coverage = decision["model_coverage"]
     lines += ["", "Mongo totals include alerts, cutouts, aux, indexes, outbox and parity status where present. "
               "ClickHouse totals include repeated physical versions and complete payloads. Mongo retains all histories: "
@@ -212,6 +237,14 @@ def main():
         source_dirty = bool(subprocess.check_output(["git", "-C", str(proposal.BOOM), "status", "--porcelain"], text=True).strip())
         demo_revision = subprocess.check_output(["git", "-C", str(integration.ROOT.parents[1]), "rev-parse", "HEAD"], text=True).strip()
         binary_sha256 = hashlib.sha256(binary.read_bytes()).hexdigest()
+        models = []
+        for path in sorted((proposal.BOOM / "data/models").glob("*.onnx")):
+            models.append({"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
+        provenance = {"boom_revision": source_revision, "boom_dirty": source_dirty, "binary_sha256": binary_sha256,
+                                "demo_revision": demo_revision,
+                                "platform": platform.platform(), "cpu_count": os.cpu_count(), "models": models,
+                                "clickhouse_version": subprocess.check_output([integration.CH, "local", "--version"], stdin=subprocess.DEVNULL, text=True).strip()}
+        (artifacts / "run-provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
         try:
             result = subprocess.run([str(binary), str(config), str(plan_path), str(filters), str(artifacts / "benchmark.json")],
                                     cwd=worker_directory, env=env, stdin=subprocess.DEVNULL, text=True, capture_output=True,
@@ -226,13 +259,7 @@ def main():
             raise RuntimeError(result.stderr[-6000:] or result.stdout[-6000:])
         report = json.loads((artifacts / "benchmark.json").read_text())
         assert report["status"] == "PASS"
-        models = []
-        for path in sorted((proposal.BOOM / "data/models").glob("*.onnx")):
-            models.append({"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
-        report["provenance"] = {"boom_revision": source_revision, "boom_dirty": source_dirty, "binary_sha256": binary_sha256,
-                                "demo_revision": demo_revision,
-                                "platform": platform.platform(), "cpu_count": os.cpu_count(), "models": models,
-                                "clickhouse_version": subprocess.check_output([integration.CH, "local", "--version"], stdin=subprocess.DEVNULL, text=True).strip()}
+        report["provenance"] = provenance
         decision = write_report(report, artifacts)
         assert decision["gates"]["history_parity"] and decision["gates"]["enrichment_parity"] and decision["gates"]["binning_parity"], "missing parity coverage"
         print(result.stdout.strip())

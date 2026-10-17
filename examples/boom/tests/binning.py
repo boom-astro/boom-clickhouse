@@ -83,7 +83,8 @@ def fixture(directory, port, artifacts):
     history = {"_id": "ZTF_bin_fixture", "version": 1,
                "prv_candidates": [point(2461000.51, 10, 2), point(2461000.52, 20, 1),
                                   point(2461000.51, 100, 1, program=3), point(2461000.51, 40, 4, band="r"),
-                                  point(2461001.51, 50, 5)],
+                                  point(2461001.51, 50, 5),
+                                  point(2461001.49999, 60, 3, band="i"), point(2461001.50001, 70, 3, band="i")],
                "fp_hists": [point(2461000.51, -5, 2), point(2461000.52, None, 2)],
                "prv_nondetections": [point(2461000.53, None, 2)]}
     def insert(history, token):
@@ -115,6 +116,8 @@ def fixture(directory, port, artifacts):
     assert forced["flux"] == -5 and forced["n_records"] == 2 and forced["n_measured"] == 1
     upper = next(row for row in daily if row["kind"] == "upper_limit")
     assert upper["flux"] is None and upper["flux_err"] is None and upper["n_measured"] == 0
+    boundary = sorted(row["bucket_start_unix"] for row in daily if row["band"] == "i")
+    assert len(boundary) == 2 and boundary[1] - boundary[0] == 86400
     assert bins(url, database, "absent", 86400) == []
     result = {"status": "PASS", "cases": cases, "checks": ["weighted flux and uncertainty", "duplicate and overlapping snapshots",
         "new correction survives old replay", "negative forced flux", "missing flux excluded from weights",
