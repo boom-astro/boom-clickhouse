@@ -27,7 +27,7 @@ jobs:
       run:
         working-directory: boom-clickhouse
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
         with:
           path: boom-clickhouse
           persist-credentials: false
@@ -58,7 +58,7 @@ jobs:
           if [ -f "$RUNNER_TEMP/adapter-demo/demo.md" ]; then
             cat "$RUNNER_TEMP/adapter-demo/demo.md" >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node.js 24
         if: always()
         with:
           name: adapter-demo
@@ -73,13 +73,13 @@ jobs:
       run:
         working-directory: boom-clickhouse
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
         with:
           path: boom-clickhouse
           persist-credentials: false
       # The example belongs to this PR; BOOM provides only its real public types.
       # No matching BOOM branch or cross-repository token is needed.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1, Node.js 24
         with:
           repository: boom-astro/boom
           ref: 1a39dcc3c403c6cc8533dfad862c1eac2c62a088
@@ -116,7 +116,7 @@ jobs:
           if [ -f "$RUNNER_TEMP/boom-demo/demo.md" ]; then
             cat "$RUNNER_TEMP/boom-demo/demo.md" >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2, Node.js 24
         if: always()
         with:
           name: boom-types-demo
