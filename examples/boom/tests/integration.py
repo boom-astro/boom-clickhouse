@@ -163,8 +163,8 @@ def check(directory, port):
     passed("HTTP failure propagation", "missing database returns a failing process status")
 
 
-def main(check_fn=check):
-    if not BINARY.is_file():
+def main(check_fn=check, *, require_binary=True):
+    if require_binary and not BINARY.is_file():
         raise SystemExit("Build first: cargo build --manifest-path examples/boom/Cargo.toml")
     with tempfile.TemporaryDirectory(prefix="boom-clickhouse-http-") as tmp:
         directory = Path(tmp)

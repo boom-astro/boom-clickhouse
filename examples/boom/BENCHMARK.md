@@ -138,3 +138,32 @@ mix), active filter semantics, measured rate/lag/recovery headroom, and producti
 failover. Resolve authorization, tombstones, schema evolution, operational ownership
 and durable backfill through BOOM's task system. The report never automatically
 approves a retention change.
+
+## Corrected on-demand bins and storage counters
+
+`Store::bins` reads normalized flux columns through `FINAL`, with fixed UTC
+cadences and separate program, band and measurement-kind groups. It returns
+inverse-variance weighted flux and uncertainty, total records and measured
+records. Upper limits and missing flux contribute counts, never weighted flux.
+Negative flux is valid. There is no persisted cache or incremental sum view.
+A future cache must invalidate/rebuild affected bins for accepted corrections
+and late data, with explicit source revision and quality policy.
+
+Each sampled enrichment alert also checks 15-minute, hourly and daily bins
+against an independent calculation from Mongo histories. Only floating-point
+bin sums use a tolerance (relative 1e-10, absolute 1e-12); history and model parity
+remain exact. `python3 examples/boom/tests/binning.py` exercises correction,
+older replay, duplicate, missing-flux, negative-flux and upper-limit cases using
+the actual native SQL and schema.
+
+Storage reports include per-column compressed/uncompressed bytes and logical
+payload bytes. Server insert/merge counters are cumulative across the dedicated
+server: subtract phase snapshots before attribution. File-write counters include
+merges and metadata; they are not physical device write measurements. Per-column
+and part snapshots can differ while background merges run.
+
+Successful phases drop their isolated Mongo database after validation to bound
+disk usage; `--keep-phase-data` retains it. Failures preserve partial evidence.
+`--recovery-only` runs an independent outage/recovery measurement and explicitly
+omits baseline overhead and healthy-throughput conclusions. Never combine its
+phases into a purported single continuous execution.

@@ -157,7 +157,7 @@ jobs:
         with:
           repository: mcoughlin/boom
           lfs: true
-          ref: a45c5bd5ca31a6dd6192198fcb93111b0b5c75de
+          ref: 7ee77a5f3527d07c4a31c67f01e857415ec35a57
           path: boom
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
@@ -204,11 +204,18 @@ jobs:
         run: |
           docker exec "${{ job.services.redis.id }}" redis-cli FLUSHALL
           python3 examples/boom/tests/benchmark.py --objects 32 --epochs 4 --enrichment-samples 16
+      - name: Verify corrected, deduplicated photometry bins
+        env:
+          DEMO_ARTIFACTS: ${{ runner.temp }}/bin-demo
+        run: python3 examples/boom/tests/binning.py
       - name: Publish proposal evidence
         if: always()
         run: |
           if [ -f "$RUNNER_TEMP/proposal-demo/demo.md" ]; then
             cat "$RUNNER_TEMP/proposal-demo/demo.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f "$RUNNER_TEMP/bin-demo/bins.md" ]; then
+            cat "$RUNNER_TEMP/bin-demo/bins.md" >> "$GITHUB_STEP_SUMMARY"
           fi
           if [ -f "$RUNNER_TEMP/benchmark-demo/decision.md" ]; then
             cat "$RUNNER_TEMP/benchmark-demo/decision.md" >> "$GITHUB_STEP_SUMMARY"
@@ -218,6 +225,12 @@ jobs:
         with:
           name: real-alert-proposal
           path: ${{ runner.temp }}/proposal-demo
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: corrected-photometry-bins
+          path: ${{ runner.temp }}/bin-demo
           if-no-files-found: ignore
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

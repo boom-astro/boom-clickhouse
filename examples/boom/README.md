@@ -3,7 +3,7 @@
 This is a runnable Rust shadow store for the normalized photometry BOOM already
 produces. It includes a small HTTP client, a separate ClickHouse table, a fixture,
 and tests against a disposable ClickHouse server. The companion
-[`clickhouse_shadow` example](https://github.com/mcoughlin/boom/blob/a45c5bd5ca31a6dd6192198fcb93111b0b5c75de/examples/clickhouse_shadow.rs) in the
+[`clickhouse_shadow` example](https://github.com/mcoughlin/boom/blob/7ee77a5f3527d07c4a31c67f01e857415ec35a57/examples/clickhouse_shadow.rs) in the
 BOOM checkout uses BOOM's actual `ZtfPrvCandidate` and `ZtfForcedPhot`
 types and its native adapter. The canonical standalone example below still
 supports the baseline BOOM commit used in CI. The basic example is a smoke test. The
@@ -14,8 +14,8 @@ baseline/shadow/recovery measurements, CPU model parity and a decision report.
 
 ## Native worker proposal and real-alert replay
 
-The companion BOOM proposal at `a45c5bd` includes a [native implementation](https://github.com/mcoughlin/boom/blob/a45c5bd5ca31a6dd6192198fcb93111b0b5c75de/src/photometry/mod.rs)
-and [architecture and recovery contract](https://github.com/mcoughlin/boom/blob/a45c5bd5ca31a6dd6192198fcb93111b0b5c75de/docs/photometry-shadow.md).
+The companion BOOM proposal at `a45c5bd` includes a [native implementation](https://github.com/mcoughlin/boom/blob/7ee77a5f3527d07c4a31c67f01e857415ec35a57/src/photometry/mod.rs)
+and [architecture and recovery contract](https://github.com/mcoughlin/boom/blob/7ee77a5f3527d07c4a31c67f01e857415ec35a57/docs/photometry-shadow.md).
 It writes durable references before Mongo ingestion, drains accepted source
 snapshots with expiring leases, compares complete records and photometry
 features, and reports lag. MongoDB retains its current authority and histories.

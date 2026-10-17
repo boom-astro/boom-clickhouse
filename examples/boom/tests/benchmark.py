@@ -16,6 +16,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 
 import integration
+import binning
 import proposal
 from replay_proxy import fault_gate
 
@@ -30,7 +31,7 @@ def percentile(values, percentile):
 def summary(report):
     """Evidence gates describe missing evidence separately from test success."""
     phases = report["phases"]
-    healthy = phases["shadow"]
+    healthy = phases.get("shadow") or phases["recovery"]
     samples = healthy["samples"]
     peak_age = max((r["lag"]["oldest_age_seconds"] or 0 for r in samples), default=0)
     target = report["targets"]["packets_per_second"]
@@ -46,18 +47,28 @@ def summary(report):
         "enrichment_parity": all(any(r["parity"]["source"]["status"] == "evaluated" for r in p["enrichment"]) and
                                  all(r["parity"]["equal"] for r in p["enrichment"])
                                  for k, p in phases.items() if k != "baseline"),
-        "throughput_target": None if target is None else healthy["settled_packets_per_second"] >= target,
+        "throughput_target": None if target is None or "shadow" not in phases else healthy["settled_packets_per_second"] >= target,
         "sampled_lag_target": None if lag_target is None else peak_age <= lag_target,
-        "recovery_headroom": None if target is None else phases["recovery"]["recovery"]["references_per_second"] > target,
+        "recovery_headroom": None if target is None or "recovery" not in phases else phases["recovery"]["recovery"]["references_per_second"] > target,
     }
+    bin_checks = 0
+    for name, phase in phases.items():
+        if name == "baseline":
+            continue
+        for sample in phase["enrichment"]:
+            measured = sample.get("binning", {})
+            for row in measured.get("cadences", []):
+                binning.compare(binning.reference(measured["mongo_history"], row["cadence_seconds"]), row["rows"])
+                bin_checks += 1
+    gates["binning_parity"] = bin_checks > 0
     # Even all measured gates passing does not establish production failover,
     # retention, authorization, or maximum capacity.
     return {"gates": gates, "verdict": "more_evidence_required",
             "recommended_next_step": "review captured replay evidence and operational gates" if all(v is True for v in gates.values()) else "collect the missing workload/filter/target evidence before a retention decision",
-            "model_coverage": {"acai_and_btsbot_alerts": len(evaluated),
+            "binning_comparisons": bin_checks, "model_coverage": {"acai_and_btsbot_alerts": len(evaluated),
                                "applecider_alerts": sum(r["applecider_eligible"] for r in evaluated)},
             "sampled_peak_age_seconds": peak_age,
-            "ingestion_elapsed_overhead_percent": 100 * (healthy["ingest_seconds"] / phases["baseline"]["ingest_seconds"] - 1)}
+            "ingestion_elapsed_overhead_percent": 100 * (healthy["ingest_seconds"] / phases["baseline"]["ingest_seconds"] - 1) if "baseline" in phases and "shadow" in phases else None}
 
 
 def write_report(report, artifacts):
@@ -75,14 +86,14 @@ def write_report(report, artifacts):
     for name, phase in report["phases"].items():
         lines.append(f"| {name} | {phase['ingest_packets_per_second']:.2f} | {phase['settled_packets_per_second']:.2f} | "
                      f"{phase['ingest_seconds']:.2f} s | {phase['settled_seconds']:.2f} s |")
-    shadow = report["phases"]["shadow"]
+    shadow = report["phases"].get("shadow") or report["phases"]["recovery"]
     recovery = report["phases"]["recovery"]["recovery"]
-    lines += ["", f"Ingestion elapsed overhead: {decision['ingestion_elapsed_overhead_percent']:.1f}% for this offered workload.",
+    lines += ["", (f"Ingestion elapsed overhead: {decision['ingestion_elapsed_overhead_percent']:.1f}% for this offered workload." if decision["ingestion_elapsed_overhead_percent"] is not None else "Recovery-only execution: baseline and healthy throughput were not measured in this run."),
               f"Recovery: {recovery['pending_at_restore']} durable references in {recovery['seconds']:.2f} s "
               f"({recovery['references_per_second']:.2f} references/s) after restoring delivery, with no new input.",
               f"Peak sampled pending age: {decision['sampled_peak_age_seconds']:.2f} s.", "",
               "| Measured latency | p50 | p95 | p99 |", "| --- | ---: | ---: | ---: |"]
-    for name, values in [("Mongo populated-history reads", report["phases"]["baseline"]["concurrent_read_ms"]),
+    for name, values in [("Mongo populated-history reads", report["phases"].get("baseline", {}).get("concurrent_read_ms", [])),
                          ("CH populated-history reads", shadow["concurrent_read_ms"]),
                          ("Producer schedule lateness", shadow["producer"]["dispatch_lateness_ms"])]:
         fields = [percentile(values, p) for p in [50, 95, 99]]
@@ -91,7 +102,7 @@ def write_report(report, artifacts):
               "All history, model, and final storage comparisons run after the timed phases. "
               "The baseline runs first; cache/order effects and the single worker limit interpretation. "
               "A paced input measures the offered workload, not maximum capacity. Sampled peaks are lower bounds. "
-              f"Empty history reads excluded from percentiles: Mongo {report['phases']['baseline'].get('empty_history_reads', 'unrecorded')}, "
+              f"Empty history reads excluded from percentiles: Mongo {report['phases'].get('baseline', {}).get('empty_history_reads', 'unrecorded')}, "
               f"CH {shadow.get('empty_history_reads', 'unrecorded')}.", "",
               "## Storage accounting", "",
               "| Phase | Mongo database allocated data | Mongo indexes | Aux logical bytes | CH compressed columns | CH parts on disk |",
@@ -105,9 +116,9 @@ def write_report(report, artifacts):
     lines += ["", "Mongo totals include alerts, cutouts, aux, indexes, outbox and parity status where present. "
               "ClickHouse totals include repeated physical versions and complete payloads. Mongo retains all histories: "
               "these figures measure the experiment's additional footprint, not projected retention savings.", "",
-              "## Compatibility", "",
+              "## Compatibility", "", f"Independent Mongo-history versus ClickHouse bin comparisons: {decision['binning_comparisons']}.", "",
               f"Full-history parity covers all {report['workload']['objects']} objects in each shadow phase. "
-              f"The healthy phase evaluated {coverage['acai_and_btsbot_alerts']} sampled alerts through ACAI/BTSbot "
+              f"The selected shadow phase evaluated {coverage['acai_and_btsbot_alerts']} sampled alerts through ACAI/BTSbot "
               f"and {coverage['applecider_alerts']} eligible alerts through AppleCiDER. "
               "Exact comparisons include typed inputs, tensor hashes, properties, scores and embeddings. "
               "Coverage exclusions and skipped empty light curves remain explicit in benchmark.json.", "",
@@ -129,7 +140,7 @@ def write_report(report, artifacts):
               "remain rollout requirements.", "", "Source revisions, packet/template SHA-256 values, schedules, raw samples "
               "and model hashes are in benchmark.json."]
     (artifacts / "decision.md").write_text("\n".join(lines) + "\n")
-    suite = ET.Element("testsuite", name="BOOM replay benchmark", tests="3", failures="0")
+    suite = ET.Element("testsuite", name="BOOM replay benchmark", tests=str(len(report["phases"])), failures="0")
     for name in report["phases"]:
         ET.SubElement(suite, "testcase", name=name)
     ET.ElementTree(suite).write(artifacts / "benchmark-junit.xml", encoding="utf-8", xml_declaration=True)
@@ -138,6 +149,8 @@ def write_report(report, artifacts):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--recovery-only", action="store_true", help="Measure outage recovery independently; omit healthy/baseline comparisons")
+    parser.add_argument("--keep-phase-data", action="store_true", help="Retain disposable Mongo databases after successful validation")
     parser.add_argument("--manifest", type=Path, help="Captured corpus JSON: kind=captured, packets=[{path,at_ms,sha256}]")
     parser.add_argument("--objects", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=4)
@@ -167,7 +180,7 @@ def main():
     else:
         corpus = {"kind": "fixture_derived", "templates": [str(p) for p in sorted((proposal.BOOM / "tests/data/alerts/ztf").glob("*.avro"))],
                   "objects": args.objects, "epochs": args.epochs, "interval_ms": args.interval_ms}
-    plan = {"corpus": corpus, "timeout_seconds": args.timeout_seconds, "enrichment_samples": args.enrichment_samples,
+    plan = {"recovery_only": args.recovery_only, "keep_phase_data": args.keep_phase_data, "corpus": corpus, "timeout_seconds": args.timeout_seconds, "enrichment_samples": args.enrichment_samples,
             "filters_are_deployed_export": args.deployed_filters,
             "target_packets_per_second": args.target_rate, "max_lag_seconds": args.max_lag_seconds}
 
@@ -197,6 +210,7 @@ def main():
         env["OTEL_SDK_DISABLED"] = "true"
         source_revision = subprocess.check_output(["git", "-C", str(proposal.BOOM), "rev-parse", "HEAD"], text=True).strip()
         source_dirty = bool(subprocess.check_output(["git", "-C", str(proposal.BOOM), "status", "--porcelain"], text=True).strip())
+        demo_revision = subprocess.check_output(["git", "-C", str(integration.ROOT.parents[1]), "rev-parse", "HEAD"], text=True).strip()
         binary_sha256 = hashlib.sha256(binary.read_bytes()).hexdigest()
         try:
             result = subprocess.run([str(binary), str(config), str(plan_path), str(filters), str(artifacts / "benchmark.json")],
@@ -216,11 +230,11 @@ def main():
         for path in sorted((proposal.BOOM / "data/models").glob("*.onnx")):
             models.append({"name": path.name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})
         report["provenance"] = {"boom_revision": source_revision, "boom_dirty": source_dirty, "binary_sha256": binary_sha256,
-                                "demo_revision": subprocess.check_output(["git", "-C", str(integration.ROOT.parents[1]), "rev-parse", "HEAD"], text=True).strip(),
+                                "demo_revision": demo_revision,
                                 "platform": platform.platform(), "cpu_count": os.cpu_count(), "models": models,
                                 "clickhouse_version": subprocess.check_output([integration.CH, "local", "--version"], stdin=subprocess.DEVNULL, text=True).strip()}
         decision = write_report(report, artifacts)
-        assert decision["gates"]["history_parity"] and decision["gates"]["enrichment_parity"], "missing parity coverage"
+        assert decision["gates"]["history_parity"] and decision["gates"]["enrichment_parity"] and decision["gates"]["binning_parity"], "missing parity coverage"
         print(result.stdout.strip())
         print(f"PASS: replay benchmark. Decision report: {artifacts / 'decision.md'}")
 

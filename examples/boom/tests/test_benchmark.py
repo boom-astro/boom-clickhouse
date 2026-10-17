@@ -5,6 +5,7 @@ from pathlib import Path
 import prepare_capture
 
 import benchmark
+import binning
 
 
 class DecisionEvidenceTests(unittest.TestCase):
@@ -35,6 +36,27 @@ class DecisionEvidenceTests(unittest.TestCase):
         result = benchmark.summary(report)
         for key in ["throughput_target", "sampled_lag_target", "recovery_headroom", "enrichment_parity"]:
             self.assertFalse(result["gates"][key], key)
+
+    def test_recovery_only_does_not_infer_healthy_throughput(self):
+        report = self.report()
+        report["phases"] = {"recovery": report["phases"]["recovery"]}
+        report["targets"]["packets_per_second"] = 30
+        result = benchmark.summary(report)
+        self.assertIsNone(result["gates"]["throughput_target"])
+        self.assertIsNone(result["ingestion_elapsed_overhead_percent"])
+        self.assertTrue(result["gates"]["recovery_headroom"])
+
+    def test_binning_uses_source_measurements_and_detects_stale_flux(self):
+        history = {"version": 2, "prv_candidates": [
+            {"jd": 2461000.51, "band": "g", "programid": 1, "psfFlux": 30, "psfFluxErr": 2},
+            {"jd": 2461000.52, "band": "g", "programid": 1, "psfFlux": 20, "psfFluxErr": 1}]}
+        rows = binning.reference(history, 86400)
+        self.assertEqual(rows[0]["flux"], 22)
+        self.assertEqual(rows[0]["n_measured"], 2)
+        binning.compare(rows, rows)
+        stale = [dict(rows[0], flux=18)]
+        with self.assertRaises(AssertionError):
+            binning.compare(rows, stale)
 
     def test_percentiles_use_observed_samples_without_inventing_missing_values(self):
         self.assertIsNone(benchmark.percentile([], 95))
