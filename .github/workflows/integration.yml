@@ -1,0 +1,124 @@
+name: ClickHouse integration demo
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: clickhouse-demo-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: "2"
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CH: ${{ github.workspace }}/.tools/clickhouse/clickhouse
+
+jobs:
+  adapter:
+    name: Adapter and SQL correctness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: boom-clickhouse
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: boom-clickhouse
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: boom-clickhouse/examples/boom -> target
+      - name: Install verified ClickHouse release
+        run: bash .github/scripts/install-clickhouse.sh "$(dirname "$CH")"
+      - name: Format, lint, and unit tests
+        run: |
+          cargo fmt --manifest-path examples/boom/Cargo.toml --check
+          rustfmt --edition 2021 --check examples/boom/boom_example.rs
+          cargo clippy --locked --manifest-path examples/boom/Cargo.toml --all-targets -- -D warnings
+          cargo test --locked --manifest-path examples/boom/Cargo.toml
+          cargo build --locked --manifest-path examples/boom/Cargo.toml
+      - name: Raw schema and incremental bin checks
+        run: python3 bin/check.py
+      - name: HTTP integration demonstration
+        env:
+          DEMO_ARTIFACTS: ${{ runner.temp }}/adapter-demo
+        run: python3 examples/boom/tests/integration.py
+      - name: Publish demonstration summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/adapter-demo/demo.md" ]; then
+            cat "$RUNNER_TEMP/adapter-demo/demo.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adapter-demo
+          path: ${{ runner.temp }}/adapter-demo
+          if-no-files-found: ignore
+
+  boom:
+    name: Real BOOM ZTF types
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: boom-clickhouse
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: boom-clickhouse
+          persist-credentials: false
+      # The example belongs to this PR; BOOM provides only its real public types.
+      # No matching BOOM branch or cross-repository token is needed.
+      - uses: actions/checkout@v4
+        with:
+          repository: boom-astro/boom
+          ref: 1a39dcc3c403c6cc8533dfad862c1eac2c62a088
+          path: boom
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            boom -> target
+            boom-clickhouse/examples/boom -> target
+          key: boom-types
+      - name: Install BOOM build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libsasl2-dev libcfitsio-dev libkrb5-dev cmake clang pkg-config libssl-dev
+      - name: Install verified ClickHouse release
+        run: bash .github/scripts/install-clickhouse.sh "$(dirname "$CH")"
+      - name: Build the adapter and BOOM example
+        run: |
+          cargo build --locked --manifest-path examples/boom/Cargo.toml
+          mkdir -p ../boom/examples
+          cp examples/boom/boom_example.rs ../boom/examples/clickhouse_shadow.rs
+          cargo build --locked --manifest-path ../boom/Cargo.toml --example clickhouse_shadow
+      - name: End-to-end writes and typed readback through BOOM
+        env:
+          DEMO_ARTIFACTS: ${{ runner.temp }}/boom-demo
+        run: |
+          export BOOM_ADAPTER="$PWD/../boom/target/debug/examples/clickhouse_shadow"
+          python3 examples/boom/tests/integration.py
+      - name: Publish BOOM demonstration summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/boom-demo/demo.md" ]; then
+            cat "$RUNNER_TEMP/boom-demo/demo.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: boom-types-demo
+          path: ${{ runner.temp }}/boom-demo
+          if-no-files-found: ignore

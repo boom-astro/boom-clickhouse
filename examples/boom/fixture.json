@@ -1,0 +1,13 @@
+{
+  "_id": "ZTF_demo",
+  "prv_candidates": [
+    {"jd": 2461000.5, "fid": 1, "pid": 101, "programid": 1, "candid": 1001, "isdiffpos": true, "magpsf": 20, "sigmapsf": 0.1, "diffmaglim": 21, "ra": 10, "dec": 20, "band": "g", "psfFlux": 10, "psfFluxErr": 2, "snr_psf": 5, "drb": 0.99},
+    {"jd": 2461000.6, "fid": 1, "pid": 102, "programid": 1, "candid": 1002, "isdiffpos": true, "magpsf": 19, "sigmapsf": 0.05, "diffmaglim": 21, "ra": 10, "dec": 20, "band": "g", "psfFlux": 20, "psfFluxErr": 1, "snr_psf": 20}
+  ],
+  "prv_nondetections": [
+    {"jd": 2461000.4, "fid": 2, "pid": 100, "programid": 1, "diffmaglim": 21, "band": "r", "psfFluxErr": 2}
+  ],
+  "fp_hists": [
+    {"jd": 2461000.5, "fid": 1, "pid": 101, "rfid": 1, "programid": 1, "magzpsci": 25, "diffmaglim": 21, "forcediffimflux": -5, "forcediffimfluxunc": 2, "procstatus": "0", "band": "g", "psfFlux": -5, "psfFluxErr": 2, "snr_psf": 2.5}
+  ]
+}
