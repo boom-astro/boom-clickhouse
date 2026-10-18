@@ -6,6 +6,11 @@ gates. The current integration mirrors histories while MongoDB retains authority
 and complete data. Reproduce it with the [architecture replay benchmark](examples/boom/BENCHMARK.md).
 The older synthetic compression results below describe a different, smaller schema.
 
+The production integration and its CI/captured-replay tooling now live in BOOM
+([WIP PR #789](https://github.com/boom-astro/boom/pull/789)). This repository is
+optional research and reporting material; BOOM does not require this checkout
+to build, test, deploy or run.
+
 [![ClickHouse integration demo](https://github.com/boom-astro/boom-clickhouse/actions/workflows/integration.yml/badge.svg)](https://github.com/boom-astro/boom-clickhouse/actions/workflows/integration.yml)
 
 A prototype of the photometry tier for BOOM: raw time series in ClickHouse,

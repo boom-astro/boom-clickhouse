@@ -3,7 +3,7 @@
 This is a runnable Rust shadow store for the normalized photometry BOOM already
 produces. It includes a small HTTP client, a separate ClickHouse table, a fixture,
 and tests against a disposable ClickHouse server. The companion
-[`clickhouse_shadow` example](https://github.com/mcoughlin/boom/blob/8f6a2529a1cc381119f98dbfbdbd53f3027005b5/examples/clickhouse_shadow.rs) in the
+[`clickhouse_shadow` example](https://github.com/mcoughlin/boom/blob/004ab6c00c104edc8c5de0f6bcd09e796c3590cf/examples/clickhouse_shadow.rs) in the
 BOOM checkout uses BOOM's actual `ZtfPrvCandidate` and `ZtfForcedPhot`
 types and its native adapter. The canonical standalone example below still
 supports the baseline BOOM commit used in CI. The basic example is a smoke test. The
@@ -17,8 +17,8 @@ are covered by the same replay checks.
 
 ## Native worker proposal and real-alert replay
 
-The companion BOOM proposal at `8f6a252` includes a [native implementation](https://github.com/mcoughlin/boom/blob/8f6a2529a1cc381119f98dbfbdbd53f3027005b5/src/photometry/mod.rs)
-and [architecture and recovery contract](https://github.com/mcoughlin/boom/blob/8f6a2529a1cc381119f98dbfbdbd53f3027005b5/docs/photometry-shadow.md).
+The companion BOOM proposal at `004ab6c` includes a [native implementation](https://github.com/mcoughlin/boom/blob/004ab6c00c104edc8c5de0f6bcd09e796c3590cf/src/photometry/mod.rs)
+and [architecture and recovery contract](https://github.com/mcoughlin/boom/blob/004ab6c00c104edc8c5de0f6bcd09e796c3590cf/docs/photometry-shadow.md).
 It writes durable references before Mongo ingestion, drains accepted source
 snapshots with expiring leases, compares complete records and photometry
 features, and reports lag. MongoDB retains its current authority and histories.
@@ -80,7 +80,7 @@ pull requests, and manual dispatch. The first job tests the adapter and prototyp
 schemas. The second checks out BOOM at commit
 `1a39dcc3c403c6cc8533dfad862c1eac2c62a088`, installs the example from this
 repository, and runs the same HTTP suite through BOOM's actual ZTF types.
-A third job checks out the native worker proposal at `8f6a252`, starts isolated
+A third job checks out the native worker proposal at `004ab6c`, starts isolated
 MongoDB and Redis services, and publishes the real-alert proposal report.
 It does not require a corresponding BOOM PR, extra secrets, or production services.
 

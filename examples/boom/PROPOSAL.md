@@ -22,7 +22,10 @@ flowchart LR
 
 The BOOM `clickhouse` branch now batches multi-object inserts, coalesces completed
 references per object and avoids idle sleeps while full batches make progress.
-A BOOM-owned CI driver passes locally with 11 recovery/batching scenarios, 32
+BOOM owns the production integration, captured-corpus preparation/replay tools
+and its self-contained CI job; this companion repository is optional research
+and reporting material. [WIP PR #789](https://github.com/boom-astro/boom/pull/789)
+tracks the integration. A BOOM-owned CI driver passes locally with 11 recovery/batching scenarios, 32
 sampled CPU model pairs and 96 independent bin comparisons. Recovery includes
 actual new packet dispatches after restoring delivery. The prior captured
 measurements below describe the earlier implementation; the new 10,000-alert
