@@ -40,6 +40,8 @@ def summary(report):
     lag_target = report["targets"]["max_lag_seconds"]
     evaluated = [r["parity"]["source"] for r in healthy["enrichment"]
                  if r["parity"]["source"]["status"] == "evaluated"]
+    recovery = phases.get("recovery", {}).get("recovery", {})
+    concurrent = recovery.get("mode") == "with_arrivals"
     gates = {
         "captured_workload": report["workload"]["kind"] == "captured",
         "recorded_arrivals": report["workload"].get("provenance", {}).get("timing_basis") == "supplied_arrival_schedule",
@@ -51,7 +53,9 @@ def summary(report):
                                  for k, p in phases.items() if k != "baseline"),
         "throughput_target": None if target is None or "shadow" not in phases else healthy["settled_packets_per_second"] >= target,
         "sampled_lag_target": None if lag_target is None or "shadow" not in phases else peak_age <= lag_target,
-        "recovery_headroom": None if target is None or "recovery" not in phases else phases["recovery"]["recovery"]["references_per_second"] > target,
+        "recovery_headroom": None if target is None or not recovery or concurrent else recovery["references_per_second"] > target,
+        "recovery_with_arrivals": None if not concurrent else recovery.get("packets_dispatched_after_restore", 0) > 0 and recovery.get("arrival_overlap_seconds", 0) > 0 and recovery.get("completed_reference_lower_bound_during_arrivals", 0) > 0,
+        "caught_up_during_arrivals": None if not concurrent else recovery.get("caught_up_during_arrivals", False),
     }
     bin_checks = 0
     for name, phase in phases.items():
@@ -90,9 +94,16 @@ def write_report(report, artifacts):
                      f"{phase['ingest_seconds']:.2f} s | {phase['settled_seconds']:.2f} s |")
     shadow = report["phases"].get("shadow") or report["phases"]["recovery"]
     recovery = report["phases"]["recovery"]["recovery"]
+    recovery_text = (f"Recovery with continued arrivals: {recovery['pending_at_restore']} initial references, "
+                     f"{recovery['packets_dispatched_after_restore']} further packet dispatches over "
+                     f"{recovery['arrival_overlap_seconds']:.2f} s, final convergence {recovery['seconds']:.2f} s after restoration. "
+                     f"At least {recovery['completed_reference_lower_bound_during_arrivals']} references completed while arrivals continued. "
+                     "Initial backlog divided by total convergence time is not delivery capacity with concurrent input."
+                     if recovery.get("mode") == "with_arrivals" else
+                     f"Recovery: {recovery['pending_at_restore']} durable references in {recovery['seconds']:.2f} s "
+                     f"({recovery['references_per_second']:.2f} references/s) after restoring delivery, with no new input.")
     lines += ["", (f"Ingestion elapsed overhead: {decision['ingestion_elapsed_overhead_percent']:.1f}% for this offered workload." if decision["ingestion_elapsed_overhead_percent"] is not None else "Recovery-only execution: baseline and healthy throughput were not measured in this run."),
-              f"Recovery: {recovery['pending_at_restore']} durable references in {recovery['seconds']:.2f} s "
-              f"({recovery['references_per_second']:.2f} references/s) after restoring delivery, with no new input.",
+              recovery_text,
               f"Peak sampled pending age: {decision['sampled_peak_age_seconds']:.2f} s.", "",
               "| Measured latency | p50 | p95 | p99 |", "| --- | ---: | ---: | ---: |"]
     for name, values in [("Mongo populated-history reads", report["phases"].get("baseline", {}).get("concurrent_read_ms", [])),
@@ -176,6 +187,7 @@ def write_report(report, artifacts):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--recovery-overlap", action="store_true", help="Restore the sink after a completed first half, then send the second manifest-paced half during recovery")
     parser.add_argument("--recovery-only", action="store_true", help="Measure outage recovery independently; omit healthy/baseline comparisons")
     parser.add_argument("--keep-phase-data", action="store_true", help="Retain disposable Mongo databases after successful validation")
     parser.add_argument("--manifest", type=Path, help="Captured corpus JSON: kind=captured, packets=[{path,at_ms,sha256}]")
@@ -207,7 +219,7 @@ def main():
     else:
         corpus = {"kind": "fixture_derived", "templates": [str(p) for p in sorted((proposal.BOOM / "tests/data/alerts/ztf").glob("*.avro"))],
                   "objects": args.objects, "epochs": args.epochs, "interval_ms": args.interval_ms}
-    plan = {"recovery_only": args.recovery_only, "keep_phase_data": args.keep_phase_data, "corpus": corpus, "timeout_seconds": args.timeout_seconds, "enrichment_samples": args.enrichment_samples,
+    plan = {"recovery_overlap": args.recovery_overlap, "recovery_only": args.recovery_only, "keep_phase_data": args.keep_phase_data, "corpus": corpus, "timeout_seconds": args.timeout_seconds, "enrichment_samples": args.enrichment_samples,
             "filters_are_deployed_export": args.deployed_filters,
             "target_packets_per_second": args.target_rate, "max_lag_seconds": args.max_lag_seconds}
 
@@ -248,23 +260,22 @@ def main():
                                 "clickhouse_version": subprocess.check_output([integration.CH, "local", "--version"], stdin=subprocess.DEVNULL, text=True).strip()}
         (artifacts / "run-provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
         try:
-            result = subprocess.run([str(binary), str(config), str(plan_path), str(filters), str(artifacts / "benchmark.json")],
-                                    cwd=worker_directory, env=env, stdin=subprocess.DEVNULL, text=True, capture_output=True,
+            with (artifacts / "benchmark.stdout.log").open("w") as stdout, (artifacts / "benchmark.stderr.log").open("w") as stderr:
+                result = subprocess.run([str(binary), str(config), str(plan_path), str(filters), str(artifacts / "benchmark.json")],
+                                    cwd=worker_directory, env=env, stdin=subprocess.DEVNULL, text=True, stdout=stdout, stderr=stderr,
                                     timeout=args.timeout_seconds * 6 + 180)
-        except subprocess.TimeoutExpired as error:
-            for name, value in [("benchmark.stdout.log", error.stdout), ("benchmark.stderr.log", error.stderr)]:
-                (artifacts / name).write_text(value.decode(errors="replace") if isinstance(value, bytes) else value or "")
+        except subprocess.TimeoutExpired:
             raise
-        (artifacts / "benchmark.stdout.log").write_text(result.stdout)
-        (artifacts / "benchmark.stderr.log").write_text(result.stderr)
         if result.returncode:
-            raise RuntimeError(result.stderr[-6000:] or result.stdout[-6000:])
+            raise RuntimeError((artifacts / "benchmark.stderr.log").read_text()[-6000:] or (artifacts / "benchmark.stdout.log").read_text()[-6000:])
         report = json.loads((artifacts / "benchmark.json").read_text())
         assert report["status"] == "PASS"
         report["provenance"] = provenance
         decision = write_report(report, artifacts)
         assert decision["gates"]["history_parity"] and decision["gates"]["enrichment_parity"] and decision["gates"]["binning_parity"], "missing parity coverage"
-        print(result.stdout.strip())
+        if args.recovery_overlap:
+            assert decision["gates"]["recovery_with_arrivals"], "no measured delivery while new arrivals continued"
+        print((artifacts / "benchmark.stdout.log").read_text().strip())
         print(f"PASS: replay benchmark. Decision report: {artifacts / 'decision.md'}")
 
     try:

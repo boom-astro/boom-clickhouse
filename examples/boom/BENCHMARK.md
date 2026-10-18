@@ -167,3 +167,33 @@ disk usage; `--keep-phase-data` retains it. Failures preserve partial evidence.
 `--recovery-only` runs an independent outage/recovery measurement and explicitly
 omits baseline overhead and healthy-throughput conclusions. Never combine its
 phases into a purported single continuous execution.
+
+## Batched delivery and recovery during arrivals
+
+The WIP BOOM branch now coalesces completed references per object and streams
+multi-object inserts with a 4 MiB target. Larger snapshots travel alone. Every
+reference retains its readiness gate, retry state and lease-owner fence. Full
+productive batches run again immediately; the poll interval applies to idle and
+error retries. Source preparation and verification remain bounded by the stated
+concurrency. No production rate is inferred from the batching change itself.
+
+Pass `--recovery-overlap` to keep the sink unavailable for the first half, wait
+for that half to commit, restore delivery, and dispatch the second half at its
+relative manifest spacing. This controlled pause changes the full arrival
+schedule and is reported explicitly. Actual dispatch times and overlapping
+source/pending samples establish whether delivery occurred while arrivals
+continued. An additional gate records sampled catch-up before arrivals finish.
+Initial backlog divided by total convergence time is not reported as delivery
+capacity for this mode.
+
+```sh
+python3 examples/boom/tests/benchmark.py --recovery-overlap \
+    --objects 32 --epochs 4 --interval-ms 30 --enrichment-samples 16
+```
+
+The BOOM repository also owns `tests/photometry_shadow.py` and its independent
+`Photometry shadow integration` workflow; they require no companion checkout.
+The small local gate passes 11 recovery/batching scenarios, 32 CPU model pairs
+and 96 independent bin comparisons. A new captured 10,000-alert comparison and
+operational-rate acceptance are still pending. Worker stdout/stderr now stream
+to artifact files during execution, and provenance is saved before the run.

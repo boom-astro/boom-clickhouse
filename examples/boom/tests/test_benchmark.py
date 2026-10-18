@@ -48,6 +48,19 @@ class DecisionEvidenceTests(unittest.TestCase):
         self.assertTrue(result["gates"]["recovery_headroom"])
         self.assertEqual(result["sampled_peak_age_seconds"], 50)
 
+    def test_concurrent_recovery_requires_arrivals_and_delivery_without_inventing_capacity(self):
+        report = self.report()
+        report["targets"]["packets_per_second"] = 30
+        report["phases"]["recovery"]["recovery"] = {"mode": "with_arrivals", "references_per_second": None,
+            "packets_dispatched_after_restore": 10, "arrival_overlap_seconds": 2,
+            "completed_reference_lower_bound_during_arrivals": 5, "caught_up_during_arrivals": False}
+        result = benchmark.summary(report)
+        self.assertTrue(result["gates"]["recovery_with_arrivals"])
+        self.assertFalse(result["gates"]["caught_up_during_arrivals"])
+        self.assertIsNone(result["gates"]["recovery_headroom"])
+        report["phases"]["recovery"]["recovery"]["completed_reference_lower_bound_during_arrivals"] = 0
+        self.assertFalse(benchmark.summary(report)["gates"]["recovery_with_arrivals"])
+
     def test_binning_uses_source_measurements_and_detects_stale_flux(self):
         history = {"version": 2, "prv_candidates": [
             {"jd": 2461000.51, "band": "g", "programid": 1, "psfFlux": 30, "psfFluxErr": 2},

@@ -18,6 +18,16 @@ flowchart LR
     C --> I[Existing active filters]
 ```
 
+## WIP implementation update
+
+The BOOM `clickhouse` branch now batches multi-object inserts, coalesces completed
+references per object and avoids idle sleeps while full batches make progress.
+A BOOM-owned CI driver passes locally with 11 recovery/batching scenarios, 32
+sampled CPU model pairs and 96 independent bin comparisons. Recovery includes
+actual new packet dispatches after restoring delivery. The prior captured
+measurements below describe the earlier implementation; the new 10,000-alert
+performance comparison and production-rate acceptance remain pending.
+
 ## What the supplied capture establishes
 
 The 10,000 unchanged public-program packets contain 10,000 distinct alerts for
@@ -154,8 +164,8 @@ outputs on representative histories before switching.
 
 ## Next implementation and acceptance gates
 
-1. Batch/coalesce accepted delivery references while retaining per-reference
-   leases, acknowledgements and revision ordering. Repeat this exact capture
+1. Measure the new batched/coalesced delivery implementation, which retains
+   per-reference leases, acknowledgements and revision ordering. Repeat this exact capture
    and fault suite to quantify ingestion overhead, convergence and merge writes.
    Then compare payload codecs/representations while preserving exact readback;
    the dominant column deserves its own compression and serialization profile.
